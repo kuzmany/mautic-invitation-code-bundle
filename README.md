@@ -8,10 +8,10 @@ Also this plugin allow Hide others fields until invitation code is validated.
 
 ### Manual
 
-1, Use last verzi
-2, Unzip files to plugins/MauticInvitationCodeBundle
-3, Clear cache (app/cache/prod/)
-4, Go to /s/plugins/reload
+1. Use last verzi
+2. Unzip files to plugins/MauticInvitationCodeBundle
+3. Clear cache (app/cache/prod/)
+4. Go to /s/plugins/reload
 
 ## Usage
 
