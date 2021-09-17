@@ -74,6 +74,7 @@ class ValidationCodeType extends AbstractType
                 'required'    => false,
                 'attr'        => [
                     'class'   => 'form-control',
+                    'data-show-on' => '{"formfield_validation_multiple_1": "checked"}',
                 ],
                 'required'    => false,
             ]

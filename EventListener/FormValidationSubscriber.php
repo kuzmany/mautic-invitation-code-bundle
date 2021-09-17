@@ -93,6 +93,10 @@ class FormValidationSubscriber extends CommonSubscriber
                             'expr'   => 'eq',
                             'value'  => $value,
                         ],
+                        [
+                            'column' => 'l.date_identified',
+                            'expr'   => 'isNotNull',
+                        ],
                     ],
                 ],
                 'hydration_mode' => 'HYDRATE_ARRAY',
@@ -119,8 +123,9 @@ class FormValidationSubscriber extends CommonSubscriber
                 ],
                 'hydration_mode' => 'HYDRATE_ARRAY',
             ]);
-            if (count($contactsSubmittedCode) > $limit) {
+            if (count($contactsSubmittedCode) >= $limit) {
                 $this->setMultipleFailedValidation($event);
+                return;
             }
 
         } else {
