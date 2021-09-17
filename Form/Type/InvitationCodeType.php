@@ -8,11 +8,14 @@
 
 namespace MauticPlugin\MauticInvitationCodeBundle\Form\Type;
 
+use Mautic\CoreBundle\Form\Type\YesNoButtonGroupType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 
 class InvitationCodeType extends AbstractType
 {
+    const HIDE_UNTIL_VALIDATE = 'hide_until_validate';
+
     /**
      * @param FormBuilderInterface $builder
      * @param array                $options
@@ -20,14 +23,14 @@ class InvitationCodeType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder->add(
-            'hide_until_validate',
-            'yesno_button_group',
+            self::HIDE_UNTIL_VALIDATE,
+            YesNoButtonGroupType::class,
             [
                 'label' => 'mautic.invitationcode.form.properties.hide_until_validate',
                 'attr'  => [
                     'tooltip' => 'mautic.invitationcode.form.properties.hide_until_validate.tooltip',
                 ],
-                'data'=>isset($options['data']['hide_until_validate']) ? $options['data']['hide_until_validate'] : false
+                'data'=>isset($options['data'][self::HIDE_UNTIL_VALIDATE]) ? $options['data'][self::HIDE_UNTIL_VALIDATE] : false
             ]
         );
 

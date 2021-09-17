@@ -15,6 +15,7 @@ use Mautic\CoreBundle\EventListener\CommonSubscriber;
 use Mautic\FormBundle\Event as Events;
 use Mautic\FormBundle\FormEvents;
 use Mautic\LeadBundle\Model\LeadModel;
+use MauticPlugin\MauticInvitationCodeBundle\Form\Type\InvitationCodeType;
 use MauticPlugin\MauticInvitationCodeBundle\Form\Type\ValidationCodeType;
 
 class FormValidationSubscriber extends CommonSubscriber
@@ -41,8 +42,8 @@ class FormValidationSubscriber extends CommonSubscriber
     public static function getSubscribedEvents()
     {
         return [
-            FormEvents::FORM_ON_BUILD                => ['onFormBuilder', 0],
-            FormEvents::ON_FORM_VALIDATE             => ['onFormValidate', 0],
+            FormEvents::FORM_ON_BUILD    => ['onFormBuilder', 0],
+            FormEvents::ON_FORM_VALIDATE => ['onFormValidate', 0],
         ];
     }
 
@@ -66,15 +67,107 @@ class FormValidationSubscriber extends CommonSubscriber
     /**
      * Custom validation     *.
      *
-     *@param Events\ValidationEvent $event
+     * @param Events\ValidationEvent $event
      */
     public function onFormValidate(Events\ValidationEvent $event)
+    {
+        $leadField = $event->getField()->getLeadField();
+
+        if (!$leadField) {
+            $this->setBasicFailedValidation($event);
+
+            return;
+        }
+
+        if (!empty($event->getField()->getValidation()[ValidationCodeType::MULTIPLE])) {
+
+            $value = $event->getValue();
+            $limit = empty($event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD])  ? $event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD] : 1;
+            $fieldToCheck = $event->getField()->getValidation()[ValidationCodeType::MULTIPLE_CODE_FIELD];
+
+            $contacts = $this->leadModel->getEntities([
+                'filter'         => [
+                    'force' => [
+                        [
+                            'column' => 'l.'.$fieldToCheck,
+                            'expr'   => 'eq',
+                            'value'  => $value,
+                        ],
+                    ],
+                ],
+                'hydration_mode' => 'HYDRATE_ARRAY',
+            ]);
+
+            if (!$contacts) {
+                $this->setBasicFailedValidation($event);
+                return;
+            }
+
+            $contactsSubmittedCode = $this->leadModel->getEntities([
+                'filter'         => [
+                    'force' => [
+                        [
+                            'column' => 'l.'.$leadField,
+                            'expr'   => 'eq',
+                            'value'  => $value,
+                        ],
+                        [
+                            'column' => 'l.date_identified',
+                            'expr'   => 'isNotNull',
+                        ],
+                    ],
+                ],
+                'hydration_mode' => 'HYDRATE_ARRAY',
+            ]);
+            if (count($contactsSubmittedCode) > $limit) {
+                $this->setMultipleFailedValidation($event);
+            }
+
+        } else {
+            $this->basicCodeValidation($event);
+        }
+
+    }
+
+    /**
+     * @param Events\ValidationEvent $event
+     */
+    private function setMultipleFailedValidation(Events\ValidationEvent $event)
+    {
+        $field = $event->getField();
+
+        if (!empty($field->getValidation()[ValidationCodeType::MULTIPLE_VALIDATION_MESSAGE])) {
+            $event->failedValidation($field->getValidation()[ValidationCodeType::MULTIPLE_VALIDATION_MESSAGE]);
+        } else {
+            $event->failedValidation($this->translator->trans('mautic.invitationcode.form.code.invalid'));
+        }
+    }
+
+    /**
+     * @param Events\ValidationEvent $event
+     */
+    private function setBasicFailedValidation(Events\ValidationEvent $event)
+    {
+        $field = $event->getField();
+
+        if (!empty($field->getValidationMessage())) {
+            $event->failedValidation($field->getValidationMessage());
+        } else {
+            $event->failedValidation($this->translator->trans('mautic.invitationcode.form.code.invalid'));
+        }
+    }
+
+    /**
+     * @param Events\ValidationEvent $event
+     */
+    public function basicCodeValidation(Events\ValidationEvent $event)
     {
         $field = $event->getField();
         $value = $event->getValue();
 
         if (!$field->getLeadField()) {
-            $this->setFailedValidation($event);
+            $this->setBasicFailedValidation($event);
+
             return;
         }
 
@@ -91,22 +184,7 @@ class FormValidationSubscriber extends CommonSubscriber
             'hydration_mode' => 'HYDRATE_ARRAY',
         ]);
         if (!count($contacts)) {
-            $this->setFailedValidation($event);
-        }
-
-    }
-
-    /**
-     * @param Events\ValidationEvent $event
-     */
-    private function setFailedValidation(Events\ValidationEvent $event)
-    {
-        $field = $event->getField();
-
-        if (!empty($field->getValidationMessage())) {
-            $event->failedValidation($field->getValidationMessage());
-        } else {
-            $event->failedValidation($this->translator->trans('mautic.invitationcode.form.code.invalid'));
+            $this->setBasicFailedValidation($event);
         }
     }
 }
