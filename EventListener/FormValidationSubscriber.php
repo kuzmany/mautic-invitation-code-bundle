@@ -14,6 +14,7 @@ namespace MauticPlugin\MauticInvitationCodeBundle\EventListener;
 use Mautic\CoreBundle\EventListener\CommonSubscriber;
 use Mautic\FormBundle\Event as Events;
 use Mautic\FormBundle\FormEvents;
+use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Model\LeadModel;
 use MauticPlugin\MauticInvitationCodeBundle\Form\Type\InvitationCodeType;
 use MauticPlugin\MauticInvitationCodeBundle\Form\Type\ValidationCodeType;
@@ -82,7 +83,8 @@ class FormValidationSubscriber extends CommonSubscriber
         if (!empty($event->getField()->getValidation()[ValidationCodeType::MULTIPLE])) {
 
             $value = $event->getValue();
-            $limit = empty($event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD])  ? $event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD] : 1;
+
+            $fieldLimit = !empty($event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD]) ? $event->getField()->getValidation()[ValidationCodeType::MULTIPLE_LIMIT_FIELD] : null;
             $fieldToCheck = $event->getField()->getValidation()[ValidationCodeType::MULTIPLE_CODE_FIELD];
 
             $contacts = $this->leadModel->getEntities([
@@ -101,11 +103,13 @@ class FormValidationSubscriber extends CommonSubscriber
                 ],
                 'hydration_mode' => 'HYDRATE_ARRAY',
             ]);
-
             if (!$contacts) {
                 $this->setBasicFailedValidation($event);
                 return;
             }
+            /** @var Lead $contact */
+            $contact = reset($contacts);
+            $limit = !empty($contact->getFieldValue($fieldLimit)) ? $contact->getFieldValue($fieldLimit) : 1;
 
             $contactsSubmittedCode = $this->leadModel->getEntities([
                 'filter'         => [
